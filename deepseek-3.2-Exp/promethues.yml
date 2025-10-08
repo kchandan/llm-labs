@@ -12,7 +12,7 @@ scrape_configs:
   - job_name: vllm
     metrics_path: /metrics
     static_configs:
-      - targets: ['127.0.0.1:8000']
+      - targets: ['host.docker.internal:8000']
 
   # Node exporter (host OS metrics)
   - job_name: node
