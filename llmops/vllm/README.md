@@ -18,3 +18,9 @@ curl -s http://<IP>:8000/v1/chat/completions \
     "temperature": 0.2
   }' | jq
 
+Open ports for Promethues/grafana
+
+sudo iptables -I INPUT -p tcp --dport 3000 -m state --state NEW,ESTABLISHED -j ACCEPT
+sudo iptables -I INPUT -p tcp --dport 9090 -m state --state NEW,ESTABLISHED -j ACCEPT
+sudo iptables -I OUTPUT -p tcp --sport 3000 -m state --state ESTABLISHED -j ACCEPT
+sudo iptables -I OUTPUT -p tcp --sport 9090 -m state --state ESTABLISHED -j ACCEPT
