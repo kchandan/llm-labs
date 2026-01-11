@@ -1,4 +1,4 @@
-# TorontoAI LLM Lab
+# LLM Labs
 
 Community-driven collection of open demos, tutorials, and deployment examples for building and running LLM-powered applications.
 
