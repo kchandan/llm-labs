@@ -1,4 +1,3 @@
-
 services:
   vllm:
     image: vllm/vllm-openai:latest
@@ -16,10 +15,22 @@ services:
     volumes:
       - ${HOME}/.cache/huggingface:/root/.cache/huggingface
     command:
+      # OpenAI-compatible server is the container entrypoint; these are vLLM args
       - --model
       - Qwen/Qwen3-0.6B
+      - --dtype
+      - float16
+      - --gpu-memory-utilization
+      - "0.92"
+      - --max-model-len
+      - "2048"
+      - --max-num-seqs
+      - "256"
+      - --max-num-batched-tokens
+      - "65536"
+      - --enable-prefix-caching
+      - --disable-log-requests
 
 networks:
   llmops-net:
     external: true
-    name: llmops-net
