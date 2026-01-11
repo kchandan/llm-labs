@@ -1,0 +1,5 @@
+nvidia_container_toolkit_version: "1.18.0-1"
+cuda_keyring_deb: "cuda-keyring_1.1-1_all.deb"
+cuda_keyring_url: "https://developer.download.nvidia.com/compute/cuda/repos/{{ distro }}/x86_64/{{ cuda_keyring_deb }}"
+distro: "ubuntu{{ ansible_distribution_version | regex_replace('\\.', '') }}"
+

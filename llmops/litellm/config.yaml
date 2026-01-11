@@ -1,0 +1,20 @@
+general_settings:
+  master_key: freellm
+
+litellm_settings:
+  max_budget: 10 
+  budget_duration: 30d 
+
+model_list:
+  # ====== OLLAMA (local) ======
+  - model_name: ollama/llama3.2:1b
+    litellm_params:
+      model: ollama/llama3.2:1b
+      model_type: ollama
+      api_base: http://ollama-server:11434
+      timeout: 120
+
+router_settings:
+  default_litellm_params:
+    temperature: 0.2
+    max_tokens: 1024

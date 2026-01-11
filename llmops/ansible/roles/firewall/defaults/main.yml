@@ -1,0 +1,6 @@
+---
+allowed_8001_cidrs: []
+ufw_allowed_anywhere_tcp_ports:
+  - 22
+ufw_blocked_tcp_ports:
+  - 8000

@@ -1,0 +1,8 @@
+---
+- name: Setup worker nodes
+  hosts: freellm_workers
+  become: true
+  gather_facts: true
+  roles:
+    - docker_install
+    - nvidia-toolkit

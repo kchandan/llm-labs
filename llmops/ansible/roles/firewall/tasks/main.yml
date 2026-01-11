@@ -1,0 +1,121 @@
+---
+- name: Refresh apt cache (stable)
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install essential base packages first (Ansible 101)
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - apt-transport-https
+      - iptables
+      - iproute2
+      - iputils-ping
+      - rsync
+      - ufw
+    state: present
+  register: base_pkgs
+  retries: 3
+  delay: 5
+  until: base_pkgs is succeeded
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Enable UFW and set default deny for incoming
+  community.general.ufw:
+    state: enabled
+    direction: incoming
+    policy: deny
+
+- name: Allow outgoing traffic by default
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+    state: enabled
+
+- name: Enable UFW logging (low)
+  community.general.ufw:
+    logging: on
+
+- name: Allow TCP ports from anywhere (SSH)
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ ufw_allowed_anywhere_tcp_ports }}"
+
+- name: Allow TCP 8001 only from allowed CIDRs
+  community.general.ufw:
+    rule: allow
+    port: "8001"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ allowed_8001_cidrs }}"
+
+- name: Explicitly deny blocked TCP ports via UFW
+  community.general.ufw:
+    rule: deny
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ ufw_blocked_tcp_ports }}"
+
+- name: Reload UFW to apply rules
+  ansible.builtin.command: ufw reload
+  changed_when: false
+
+- name: Ensure DOCKER-USER chain exists (create if missing)
+  ansible.builtin.shell: |
+    iptables -S DOCKER-USER >/dev/null 2>&1 || iptables -N DOCKER-USER
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Ensure FORWARD jumps to DOCKER-USER
+  ansible.builtin.shell: |
+    iptables -C FORWARD -j DOCKER-USER 2>/dev/null || iptables -I FORWARD -j DOCKER-USER
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Allow tcp/8001 from allowed CIDRs (insert if missing)
+  ansible.builtin.shell: |
+    iptables -C DOCKER-USER -s {{ cidr }} -p tcp --dport 8001 -j ACCEPT 2>/dev/null || \
+    iptables -I DOCKER-USER -s {{ cidr }} -p tcp --dport 8001 -j ACCEPT
+  args:
+    executable: /bin/bash
+  loop: "{{ allowed_8001_cidrs }}"
+  loop_control:
+    loop_var: cidr
+  changed_when: false
+
+- name: Ensure catch-all DROP for tcp/8001 (below ACCEPTs)
+  ansible.builtin.shell: |
+    iptables -C DOCKER-USER -p tcp --dport 8001 -j DROP 2>/dev/null || \
+    iptables -A DOCKER-USER -p tcp --dport 8001 -j DROP
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Ensure DROP for tcp/8000 (block Docker-bypassed exposure)
+  ansible.builtin.shell: |
+    iptables -C DOCKER-USER -p tcp --dport 8000 -j DROP 2>/dev/null || \
+    iptables -I DOCKER-USER -p tcp --dport 8000 -j DROP
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Save firewall rules (Ubuntu 22 & 24 safe)
+  ansible.builtin.shell: |
+    if command -v netfilter-persistent >/dev/null 2>&1; then
+      netfilter-persistent save
+    else
+      iptables-save > /etc/iptables/rules.v4 || true
+      ip6tables-save > /etc/iptables/rules.v6 || true
+    fi
+  args:
+    executable: /bin/bash
+  changed_when: false

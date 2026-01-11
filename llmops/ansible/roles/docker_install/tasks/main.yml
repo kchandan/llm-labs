@@ -1,0 +1,55 @@
+---
+# Install Docker CE on Ubuntu 22/24
+- name: Update apt and install prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: true
+
+- name: Create directory for Docker keyrings
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Download Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Add Docker repository to apt sources
+  ansible.builtin.shell: |
+    arch=$(dpkg --print-architecture)
+    codename=$(source /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+    echo "deb [arch=$arch signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $codename stable" > /etc/apt/sources.list.d/docker.list
+  args:
+    executable: /bin/bash
+
+- name: Update apt cache after adding Docker repo
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Docker packages
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+- name: Ensure Docker service is enabled and started
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Add ubuntu user to docker group
+  ansible.builtin.user:
+    name: "{{ ubuntu_user }}"
+    groups: docker
+    append: true

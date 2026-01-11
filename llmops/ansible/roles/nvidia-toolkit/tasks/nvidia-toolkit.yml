@@ -1,0 +1,67 @@
+---
+- name: Install prerequisites
+  apt:
+    name:
+      - curl
+      - gnupg2
+    update_cache: yes
+    state: present
+
+- name: Create keyring directory if missing
+  file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download NVIDIA container toolkit GPG key
+  get_url:
+    url: "https://nvidia.github.io/libnvidia-container/gpgkey"
+    dest: /tmp/nvidia-container.gpg
+    mode: '0644'
+
+- name: Convert GPG key to dearmor format
+  command: gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg /tmp/nvidia-container.gpg
+  args:
+    creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+- name: Add NVIDIA container toolkit apt repository
+  shell: |
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+  args:
+    creates: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+- name: Enable experimental repository (optional)
+  lineinfile:
+    path: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    regexp: '^#.*experimental'
+    state: present
+    line: "{{ item }}"
+  with_items:
+    - "deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://nvidia.github.io/libnvidia-container/experimental/deb/ /"
+  when: false   # change to true if you want experimental packages
+
+- name: Update apt cache after repo add
+  apt:
+    update_cache: yes
+
+- name: Install NVIDIA Container Toolkit packages
+  apt:
+    name:
+      - "nvidia-container-toolkit={{ nvidia_container_toolkit_version }}"
+      - "nvidia-container-toolkit-base={{ nvidia_container_toolkit_version }}"
+      - "libnvidia-container-tools={{ nvidia_container_toolkit_version }}"
+      - "libnvidia-container1={{ nvidia_container_toolkit_version }}"
+    state: present
+
+- name: Configure NVIDIA Docker runtime
+  command: nvidia-ctk runtime configure --runtime=docker
+  args:
+    creates: /etc/docker/daemon.json
+
+- name: Restart Docker
+  systemd:
+    name: docker
+    state: restarted
+    enabled: yes

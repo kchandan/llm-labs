@@ -1,0 +1,20 @@
+---
+
+- name: Download cuda-keyring deb
+  get_url:
+    url: "{{ cuda_keyring_url }}"
+    dest: "/tmp/{{ cuda_keyring_deb }}"
+    mode: "0644"
+
+- name: Install cuda-keyring deb (dpkg)
+  apt:
+    deb: "/tmp/{{ cuda_keyring_deb }}"
+
+- name: apt update
+  apt:
+    update_cache: yes
+
+- name: Install cuda-drivers
+  apt:
+    name: cuda-drivers
+    state: present
