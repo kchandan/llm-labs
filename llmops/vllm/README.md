@@ -1,3 +1,17 @@
+# Nvidia GenAI-Perf for vLLM Qwen
+
+```
+genai-perf profile \
+  -m Qwen/Qwen3-0.6B \
+  --endpoint-type chat \
+  --synthetic-input-tokens-mean 200 \
+  --synthetic-input-tokens-stddev 0 \
+  --output-tokens-mean 100 \
+  --output-tokens-stddev 0 \
+  --streaming \
+  --request-count 50 \
+  --warmup-request-count 10
+```
 
 
 Allow Firewall
